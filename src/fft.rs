@@ -1,6 +1,6 @@
 use modinverse::modinverse;
 use modular::{Modular, Modulo};
-use std::borrow::{BorrowMut, Borrow};
+use std::borrow::{Borrow, BorrowMut};
 use std::fmt::Display;
 use std::{error::Error, vec::Vec};
 
@@ -10,7 +10,7 @@ pub struct NFFT {
     pub ROOT: u32,
     pub ROOT_1: u32,
     pub ROOT_PW: u32,
-    pub i_2: u32
+    pub i_2: u32,
 }
 
 #[derive(Debug)]
@@ -24,16 +24,23 @@ impl Display for InvalidArgumentError {
 impl Error for InvalidArgumentError {}
 
 impl NFFT {
-    pub fn new(MOD: u32, ROOT: u32, ROOT_1: u32, ROOT_PW: u32) -> Self{
+    pub fn new(MOD: u32, ROOT: u32, ROOT_1: u32, ROOT_PW: u32) -> Self {
         NFFT {
             MOD: MOD,
             ROOT: ROOT,
             ROOT_1: ROOT_1,
             ROOT_PW: ROOT_PW,
-            i_2: modinverse(2i32, TryInto::<i32>::try_into(MOD).unwrap()).unwrap().try_into().unwrap()
+            i_2: modinverse(2i32, TryInto::<i32>::try_into(MOD).unwrap())
+                .unwrap()
+                .try_into()
+                .unwrap(),
         }
     }
-    pub fn nfft(&self, mut a: Vec<Modulo>, invert: bool) -> Result<Vec<Modulo>, InvalidArgumentError> {
+    pub fn nfft(
+        &self,
+        mut a: Vec<Modulo>,
+        invert: bool,
+    ) -> Result<Vec<Modulo>, InvalidArgumentError> {
         let i_2: i32 = self.i_2.try_into().unwrap();
         let i_2 = i_2.to_modulo(self.MOD);
         let n = a.len();
@@ -87,7 +94,7 @@ pub static DEFAULT_NFFT: NFFT = NFFT {
     ROOT: 5,
     ROOT_1: 4404020,
     ROOT_PW: 1 << 20,
-    i_2: 3670017
+    i_2: 3670017,
 };
 
 pub fn nfft(a: Vec<Modulo>, invert: bool) -> Result<Vec<Modulo>, InvalidArgumentError> {

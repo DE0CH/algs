@@ -20,5 +20,4 @@ mod tests {
         assert_eq!(utils::ceilpow2(100), 128);
         assert_eq!(utils::ceilpow2(128), 128);
     }
-
 }
