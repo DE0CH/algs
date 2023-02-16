@@ -8,7 +8,7 @@ mod tests {
     use modular::{Modular, Modulo};
 
     use crate::utils::{self, ispow2};
-    use crate::fft::{multiply_polynomials, InvalidArgumentError};
+    use crate::fft::{multiply_polynomials};
     use crate::fft::DEFAULT_NFFT;
     use crate::fft::pow_polynomial;
 

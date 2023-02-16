@@ -1,9 +1,9 @@
 #![feature(iter_intersperse)]
-use algs::fft::{nfft, DEFAULT_NFFT, pow_polynomial};
-use algs::utils::ceilpow2;
-use modular::{Modular, Modulo};
-use std::env;
-use std::iter::once;
+use algs::fft::{DEFAULT_NFFT, pow_polynomial};
+
+use modular::{Modular};
+
+
 
 fn main() {
     let a = vec![1, 1, 1, 1, 1, 1].into_iter().map(|x| x.to_modulo(DEFAULT_NFFT.r#mod)).collect();
