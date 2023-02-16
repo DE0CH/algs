@@ -90,13 +90,19 @@ impl NFFT {
         Ok(y)
     }
 
-    pub fn multiply_polynomials(&self, mut a: Vec<Modulo>, mut b: Vec<Modulo>) -> Result<Vec<Modulo>, InvalidArgumentError> {
+    pub fn multiply_polynomials(
+        &self,
+        mut a: Vec<Modulo>,
+        mut b: Vec<Modulo>,
+    ) -> Result<Vec<Modulo>, InvalidArgumentError> {
         let n: usize = ceilpow2((a.len() + b.len()) as u32).try_into().unwrap();
         a.extend(repeat(0.to_modulo(self.r#mod)).take(n - a.len()));
         b.extend(repeat(0.to_modulo(self.r#mod)).take(n - b.len()));
         let a1 = self.nfft(a, false)?;
         let b1 = self.nfft(b, false)?;
-        let p1: Vec<Modulo> = zip(a1.into_iter(), b1.into_iter()).map(|(x, y)| x * y).collect();
+        let p1: Vec<Modulo> = zip(a1.into_iter(), b1.into_iter())
+            .map(|(x, y)| x * y)
+            .collect();
         let p = self.nfft(p1, true)?;
         Ok(p)
     }
@@ -110,22 +116,27 @@ impl NFFT {
         Ok(p)
     }
 
-    pub fn pow_polynomial(&self, a: Vec<Modulo>, n: u32, k: usize) -> Result<Vec<Modulo>, InvalidArgumentError> {
+    pub fn pow_polynomial(
+        &self,
+        a: Vec<Modulo>,
+        n: u32,
+        k: usize,
+    ) -> Result<Vec<Modulo>, InvalidArgumentError> {
         if n == 1 {
             return Ok(a);
         }
         if n % 2 != 0 {
-            let mut ans = self.multiply_polynomials(a.clone(), self.pow_polynomial(a, n-1, k)?)?;
+            let mut ans =
+                self.multiply_polynomials(a.clone(), self.pow_polynomial(a, n - 1, k)?)?;
             ans.resize(k, 0.to_modulo(self.r#mod));
             Ok(ans)
         } else {
-            let p = self.pow_polynomial(a, n/2, k)?;
+            let p = self.pow_polynomial(a, n / 2, k)?;
             let mut ans = self.pow2_polynomial(p)?;
             ans.resize(k, 0.to_modulo(self.r#mod));
             Ok(ans)
         }
     }
-
 }
 
 pub static DEFAULT_NFFT: NFFT = NFFT {
@@ -140,10 +151,17 @@ pub fn nfft(a: Vec<Modulo>, invert: bool) -> Result<Vec<Modulo>, InvalidArgument
     DEFAULT_NFFT.nfft(a, invert)
 }
 
-pub fn multiply_polynomials(a: Vec<Modulo>, b: Vec<Modulo>) -> Result<Vec<Modulo>, InvalidArgumentError> {
+pub fn multiply_polynomials(
+    a: Vec<Modulo>,
+    b: Vec<Modulo>,
+) -> Result<Vec<Modulo>, InvalidArgumentError> {
     DEFAULT_NFFT.multiply_polynomials(a, b)
 }
 
-pub fn pow_polynomial(a: Vec<Modulo>, n: u32, k: usize) -> Result<Vec<Modulo>, InvalidArgumentError> {
+pub fn pow_polynomial(
+    a: Vec<Modulo>,
+    n: u32,
+    k: usize,
+) -> Result<Vec<Modulo>, InvalidArgumentError> {
     DEFAULT_NFFT.pow_polynomial(a, n, k)
 }
