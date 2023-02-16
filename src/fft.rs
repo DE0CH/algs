@@ -1,15 +1,17 @@
 use modinverse::modinverse;
 use modular::{Modular, Modulo};
-use std::borrow::{Borrow, BorrowMut};
 use std::fmt::Display;
+use std::iter::{repeat, zip};
 use std::{error::Error, vec::Vec};
+
+use crate::utils::ceilpow2;
 
 use super::utils::ispow2;
 pub struct NFFT {
-    pub MOD: u32,
-    pub ROOT: u32,
-    pub ROOT_1: u32,
-    pub ROOT_PW: u32,
+    pub r#mod: u32,
+    pub root: u32,
+    pub root_1: u32,
+    pub root_pw: u32,
     pub i_2: u32,
 }
 
@@ -24,13 +26,13 @@ impl Display for InvalidArgumentError {
 impl Error for InvalidArgumentError {}
 
 impl NFFT {
-    pub fn new(MOD: u32, ROOT: u32, ROOT_1: u32, ROOT_PW: u32) -> Self {
+    pub fn new(r#mod: u32, root: u32, root_1: u32, root_pw: u32) -> Self {
         NFFT {
-            MOD: MOD,
-            ROOT: ROOT,
-            ROOT_1: ROOT_1,
-            ROOT_PW: ROOT_PW,
-            i_2: modinverse(2i32, TryInto::<i32>::try_into(MOD).unwrap())
+            r#mod,
+            root,
+            root_1,
+            root_pw,
+            i_2: modinverse(2i32, TryInto::<i32>::try_into(r#mod).unwrap())
                 .unwrap()
                 .try_into()
                 .unwrap(),
@@ -42,7 +44,7 @@ impl NFFT {
         invert: bool,
     ) -> Result<Vec<Modulo>, InvalidArgumentError> {
         let i_2: i32 = self.i_2.try_into().unwrap();
-        let i_2 = i_2.to_modulo(self.MOD);
+        let i_2 = i_2.to_modulo(self.r#mod);
         let n = a.len();
         if !ispow2(n.try_into().unwrap()) {
             return Err(InvalidArgumentError(
@@ -64,17 +66,17 @@ impl NFFT {
 
         let y0 = self.nfft(a0, invert)?;
         let y1 = self.nfft(a1, invert)?;
-        let wlen: i32 = (if invert { self.ROOT_1 } else { self.ROOT })
+        let wlen: i32 = (if invert { self.root_1 } else { self.root })
             .try_into()
             .unwrap();
-        let mut wlen = wlen.to_modulo(self.MOD);
+        let mut wlen = wlen.to_modulo(self.r#mod);
         let mut i: u32 = n.try_into().unwrap();
-        while i < self.ROOT_PW {
+        while i < self.root_pw {
             wlen = wlen * wlen;
             i <<= 1;
         }
 
-        let mut w = 1i32.to_modulo(self.MOD);
+        let mut w = 1i32.to_modulo(self.r#mod);
         for i in 0..n / 2 {
             a[i] = y0[i] + w * y1[i];
             a[n / 2 + i] = y0[i] - w * y1[i];
@@ -87,16 +89,61 @@ impl NFFT {
         let y = a;
         Ok(y)
     }
+
+    pub fn multiply_polynomials(&self, mut a: Vec<Modulo>, mut b: Vec<Modulo>) -> Result<Vec<Modulo>, InvalidArgumentError> {
+        let n: usize = ceilpow2((a.len() + b.len()) as u32).try_into().unwrap();
+        a.extend(repeat(0.to_modulo(self.r#mod)).take(n - a.len()));
+        b.extend(repeat(0.to_modulo(self.r#mod)).take(n - b.len()));
+        let a1 = self.nfft(a, false)?;
+        let b1 = self.nfft(b, false)?;
+        let p1: Vec<Modulo> = zip(a1.into_iter(), b1.into_iter()).map(|(x, y)| x * y).collect();
+        let p = self.nfft(p1, true)?;
+        Ok(p)
+    }
+
+    pub fn pow2_polynomial(&self, mut a: Vec<Modulo>) -> Result<Vec<Modulo>, InvalidArgumentError> {
+        let n: usize = ceilpow2((a.len() * 2) as u32).try_into().unwrap();
+        a.extend(repeat(0.to_modulo(self.r#mod)).take(n - a.len()));
+        let a1 = self.nfft(a, false)?;
+        let p1: Vec<Modulo> = a1.into_iter().map(|x| x * x).collect();
+        let p = self.nfft(p1, true)?;
+        Ok(p)
+    }
+
+    pub fn pow_polynomial(&self, a: Vec<Modulo>, n: u32, k: usize) -> Result<Vec<Modulo>, InvalidArgumentError> {
+        if n == 1 {
+            return Ok(a);
+        }
+        if n % 2 != 0 {
+            let mut ans = self.multiply_polynomials(a.clone(), self.pow_polynomial(a, n-1, k)?)?;
+            ans.resize(k, 0.to_modulo(self.r#mod));
+            Ok(ans)
+        } else {
+            let p = self.pow_polynomial(a, n/2, k)?;
+            let mut ans = self.pow2_polynomial(p)?;
+            ans.resize(k, 0.to_modulo(self.r#mod));
+            Ok(ans)
+        }
+    }
+
 }
 
 pub static DEFAULT_NFFT: NFFT = NFFT {
-    MOD: 7340033,
-    ROOT: 5,
-    ROOT_1: 4404020,
-    ROOT_PW: 1 << 20,
+    r#mod: 7340033,
+    root: 5,
+    root_1: 4404020,
+    root_pw: 1 << 20,
     i_2: 3670017,
 };
 
 pub fn nfft(a: Vec<Modulo>, invert: bool) -> Result<Vec<Modulo>, InvalidArgumentError> {
     DEFAULT_NFFT.nfft(a, invert)
+}
+
+pub fn multiply_polynomials(a: Vec<Modulo>, b: Vec<Modulo>) -> Result<Vec<Modulo>, InvalidArgumentError> {
+    DEFAULT_NFFT.multiply_polynomials(a, b)
+}
+
+pub fn pow_polynomial(a: Vec<Modulo>, n: u32, k: usize) -> Result<Vec<Modulo>, InvalidArgumentError> {
+    DEFAULT_NFFT.pow_polynomial(a, n, k)
 }
