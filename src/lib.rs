@@ -11,6 +11,7 @@ mod tests {
     use crate::fft::multiply_polynomials;
     use crate::fft::pow_polynomial;
     use crate::fft::DEFAULT_NFFT;
+    use crate::matrixpow::Matrix;
     use crate::utils::{self, ispow2};
 
     #[test]
@@ -62,6 +63,24 @@ mod tests {
         .into_iter()
         .map(|x| x.to_modulo(DEFAULT_NFFT.r#mod))
         .collect();
+        assert_eq!(p, ans);
+    }
+
+    #[test]
+    fn test_mul() {
+        let p = vec![vec![1, 2], vec![2, 3]];
+        let p: Vec<Vec<Modulo>> = p
+            .into_iter()
+            .map(|x| x.into_iter().map(|x| x.to_modulo(1000000007)).collect())
+            .collect();
+        let p = Matrix(p);
+        let p = p.pow(6);
+        let ans = vec![vec![1597, 2584], vec![2584, 4181]];
+        let ans: Vec<Vec<Modulo>> = ans
+            .into_iter()
+            .map(|x| x.into_iter().map(|x| x.to_modulo(1000000007)).collect())
+            .collect();
+        let ans = Matrix(ans);
         assert_eq!(p, ans);
     }
 }
